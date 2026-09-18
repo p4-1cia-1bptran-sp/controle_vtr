@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: controle-vtr-frota-1cia-1bptran
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production

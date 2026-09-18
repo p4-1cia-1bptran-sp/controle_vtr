@@ -1,0 +1,439 @@
+{
+  "appTitle": "🚓 CONTROLE DE VIATURAS - FROTA 1ª CIA DO 1º BPTRAN",
+  "lastStatusUpdate": "29/08/2026 13:50:00",
+  "updatedAt": "2026-09-07T13:00:00.000Z",
+  "pizzaCenterImage": "",
+  "customCias": [
+    "Batalhão",
+    "1ª Cia",
+    "2ª Cia",
+    "3ª Cia",
+    "4ª Cia",
+    "CTT"
+  ],
+  "customModels": [
+    "BASE MÓVEL",
+    "CARGO",
+    "DUSTER",
+    "GUINCHO",
+    "RANGER",
+    "S-10",
+    "SPIN",
+    "TRAIL BLAZER",
+    "XT-660",
+    "OUTRO"
+  ],
+  "customPelotoes": [
+    "1º PEL",
+    "2º PEL",
+    "3º PEL",
+    "4º PEL",
+    "5º PEL",
+    "6º PEL",
+    "7º PEL",
+    "8º PEL",
+    "DEJEM",
+    "DELEGADA",
+    "ADM"
+  ],
+  "customStatuses": [
+    "OPERANDO",
+    "BAIXADA",
+    "DESCARGA",
+    "ADM"
+  ],
+  "customLocais": [
+    "ADM",
+    "BASE",
+    "CONCESSIONÁRIA",
+    "CPTRAN",
+    "OFICINA",
+    "PÁTIO",
+    "EAP",
+    "OUTRO"
+  ],
+  "customQuickReasons": [
+    {
+      "key": "ARREFECIMENTO",
+      "label": "Arrefecimento"
+    },
+    {
+      "key": "ARRANQUE",
+      "label": "Arranque"
+    },
+    {
+      "key": "BATERIA",
+      "label": "Bateria"
+    },
+    {
+      "key": "CÂMBIO",
+      "label": "Câmbio"
+    },
+    {
+      "key": "EMBREAGEM",
+      "label": "Embreagem"
+    },
+    {
+      "key": "LUMINOSOS",
+      "label": "Luminosos"
+    },
+    {
+      "key": "MOTOR",
+      "label": "Motor"
+    },
+    {
+      "key": "PNEU",
+      "label": "Pneu"
+    },
+    {
+      "key": "RÁDIO",
+      "label": "Rádio"
+    },
+    {
+      "key": "SONORO",
+      "label": "Sonoro"
+    },
+    {
+      "key": "DESCARGA",
+      "label": "Descarga"
+    }
+  ],
+  "records": [
+    {
+      "id": "T-01100",
+      "vehicle": "T-01100",
+      "cia": "1ª Cia",
+      "model": "TRAIL BLAZER",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01103",
+      "vehicle": "T-01103",
+      "cia": "1ª Cia",
+      "model": "DUSTER",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01104",
+      "vehicle": "T-01104",
+      "cia": "1ª Cia",
+      "model": "DUSTER",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01105",
+      "vehicle": "T-01105",
+      "cia": "1ª Cia",
+      "model": "DUSTER",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01106",
+      "vehicle": "T-01106",
+      "cia": "1ª Cia",
+      "model": "DUSTER",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01107",
+      "vehicle": "T-01107",
+      "cia": "1ª Cia",
+      "model": "DUSTER",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01109",
+      "vehicle": "T-01109",
+      "cia": "1ª Cia",
+      "model": "SPIN",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01110",
+      "vehicle": "T-01110",
+      "cia": "1ª Cia",
+      "model": "SPIN",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01112",
+      "vehicle": "T-01112",
+      "cia": "1ª Cia",
+      "model": "SPIN",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01114",
+      "vehicle": "T-01114",
+      "cia": "1ª Cia",
+      "model": "SPIN",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01115",
+      "vehicle": "T-01115",
+      "cia": "1ª Cia",
+      "model": "SPIN",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01116",
+      "vehicle": "T-01116",
+      "cia": "1ª Cia",
+      "model": "SPIN",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01118",
+      "vehicle": "T-01118",
+      "cia": "1ª Cia",
+      "model": "SPIN",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01119",
+      "vehicle": "T-01119",
+      "cia": "1ª Cia",
+      "model": "SPIN",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01120",
+      "vehicle": "T-01120",
+      "cia": "1ª Cia",
+      "model": "DUSTER",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01124",
+      "vehicle": "T-01124",
+      "cia": "1ª Cia",
+      "model": "DUSTER",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01125",
+      "vehicle": "T-01125",
+      "cia": "1ª Cia",
+      "model": "SPIN",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01126",
+      "vehicle": "T-01126",
+      "cia": "1ª Cia",
+      "model": "SPIN",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01127",
+      "vehicle": "T-01127",
+      "cia": "1ª Cia",
+      "model": "SPIN",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01130",
+      "vehicle": "T-01130",
+      "cia": "1ª Cia",
+      "model": "TRAIL BLAZER",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01135",
+      "vehicle": "T-01135",
+      "cia": "1ª Cia",
+      "model": "SPIN",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01136",
+      "vehicle": "T-01136",
+      "cia": "1ª Cia",
+      "model": "RANGER",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01137",
+      "vehicle": "T-01137",
+      "cia": "1ª Cia",
+      "model": "RANGER",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "T-01147",
+      "vehicle": "T-01147",
+      "cia": "1ª Cia",
+      "model": "S-10",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "3-106",
+      "vehicle": "3-106",
+      "cia": "1ª Cia",
+      "model": "S-10",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "26-24",
+      "vehicle": "26-24",
+      "cia": "1ª Cia",
+      "model": "MASTER",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "19-167",
+      "vehicle": "19-167",
+      "cia": "1ª Cia",
+      "model": "XT-660",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    },
+    {
+      "id": "13-26",
+      "vehicle": "13-26",
+      "cia": "1ª Cia",
+      "model": "CARGO",
+      "pelotao": "ADM",
+      "status": "OPERANDO",
+      "obs": "",
+      "destino": "BASE",
+      "date": "",
+      "data_forms": ""
+    }
+  ]
+}

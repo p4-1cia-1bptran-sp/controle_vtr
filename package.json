@@ -1,0 +1,26 @@
+{
+  "name": "controle-vtr-frota-1cia-1bptran",
+  "version": "1.0.0",
+  "description": "Sistema de Controle de Viaturas (VTR) - Frota 1\u00aa Cia do 1\u00ba BPTran - Otimizado para Vercel e Render",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "frota",
+    "viaturas",
+    "policia-militar",
+    "render",
+    "nodejs",
+    "vercel"
+  ],
+  "author": "Sd Vagner - Telem\u00e1tica"
+}
