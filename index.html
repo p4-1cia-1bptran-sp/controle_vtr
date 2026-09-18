@@ -4934,9 +4934,10 @@
                     const localTime = new Date(localUpdatedAt).getTime();
                     const serverTime = new Date(serverUpdatedAt).getTime();
 
-                    // Nunca sobrescreve o servidor durante background sync automático.
-                    // Apenas envia caso seja uma ação direta do usuário nos últimos 5 segundos.
-                    if (!isBackground && localTime > (serverTime + 5000)) {
+                    // Se o dado local for mais novo que o do servidor (ex: importação recente ou edição local),
+                    // NUNCA permita que o servidor com dados antigos sobrescreva o que foi feito localmente!
+                    // Em vez disso, envia os dados locais para a nuvem.
+                    if (localTime > serverTime) {
                         syncAllDataToOnline(true);
                         setCloudStatusBadge('connected', '🟢 Online');
                         isCloudConnected = true;
@@ -6435,6 +6436,9 @@
         v.date = document.getElementById('qeDate').value || todayStr;
         v.data_forms = v.date.split('-').reverse().join('/');
 
+        const importTime = new Date().toISOString();
+        localStorage.setItem('batalhao_vtr_updated_at', importTime);
+        lastSyncedHash = '';
         saveRecords();
         updateStatusTimestamp();
         populateMonthSelect();

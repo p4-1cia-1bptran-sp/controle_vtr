@@ -44,13 +44,12 @@ function getDefaultDatabase() {
 
 async function getDatabase() {
     const now = Date.now();
-    // Cache em memória curto (1.5s) para acelerar requisições consecutivas sem perder tempo real
+    // Cache em memória curto (1.5s)
     if (cachedDb && (now - lastDbReadTime < 1500)) {
         return cachedDb;
     }
 
-    // 1. Prioridade Máxima: Banco de Dados Central em Nuvem (Firebase Realtime Database)
-    // Isso garante que alterações feitas em um celular apareçam imediatamente no outro celular
+    // 1. Tenta ler do Firebase Realtime Database (Nuvem universal compartilhada)
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 3500);
@@ -62,12 +61,13 @@ async function getDatabase() {
 
         if (fbRes.ok) {
             const fbData = await fbRes.json();
-            if (fbData && typeof fbData === 'object' && Array.isArray(fbData.records) && fbData.records.length > 0) {
-                cachedDb = fbData;
+            const finalData = (fbData && fbData.dados_frota) ? fbData.dados_frota : fbData;
+            if (finalData && typeof finalData === 'object' && Array.isArray(finalData.records) && finalData.records.length > 0) {
+                cachedDb = finalData;
                 lastDbReadTime = now;
                 try {
-                    fs.writeFileSync(WRITABLE_DB_FILE, JSON.stringify(fbData, null, 2), 'utf-8');
-                } catch(e) {}
+                    fs.writeFileSync(WRITABLE_DB_FILE, JSON.stringify(finalData, null, 2), 'utf-8');
+                } catch (e) {}
                 return cachedDb;
             }
         }
@@ -80,7 +80,7 @@ async function getDatabase() {
         if (fs.existsSync(WRITABLE_DB_FILE)) {
             const raw = fs.readFileSync(WRITABLE_DB_FILE, 'utf-8');
             const parsed = JSON.parse(raw);
-            if (parsed && typeof parsed === 'object' && Array.isArray(parsed.records)) {
+            if (parsed && typeof parsed === 'object' && Array.isArray(parsed.records) && parsed.records.length > 0) {
                 cachedDb = parsed;
                 lastDbReadTime = now;
                 return cachedDb;
@@ -122,10 +122,9 @@ async function saveDatabase(data) {
     }
 
     // 2. CRÍTICO: Grava e AGUARDA a confirmação no Firebase Realtime Database
-    // Sem esse await, a Vercel congela a função antes do envio e outros celulares não recebem a mudança!
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 4000);
+        const timeout = setTimeout(() => controller.abort(), 4500);
         const fbRes = await fetch(FIREBASE_URL, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -183,64 +182,66 @@ module.exports = async (req, res) => {
         }
 
         if (req.method === 'POST' || req.method === 'PUT') {
-            const processPayload = async (payload) => {
+            let payload = req.body;
+            if (!payload || typeof payload !== 'object') {
                 try {
-                    const currentDb = await getDatabase();
-                    const updatedDb = {
-                        appTitle: payload.appTitle || currentDb.appTitle || "🚓 CONTROLE DE VIATURAS - FROTA 1ª CIA DO 1º BPTRAN",
-                        pizzaCenterImage: payload.pizzaCenterImage !== undefined ? payload.pizzaCenterImage : (currentDb.pizzaCenterImage || ""),
-                        lastStatusUpdate: payload.lastStatusUpdate || currentDb.lastStatusUpdate || new Date().toLocaleString('pt-BR'),
-                        customCias: Array.isArray(payload.customCias) ? payload.customCias : (currentDb.customCias || []),
-                        customModels: Array.isArray(payload.customModels) ? payload.customModels : (currentDb.customModels || []),
-                        customPelotoes: Array.isArray(payload.customPelotoes) ? payload.customPelotoes : (currentDb.customPelotoes || []),
-                        customStatuses: Array.isArray(payload.customStatuses) ? payload.customStatuses : (currentDb.customStatuses || []),
-                        customLocais: Array.isArray(payload.customLocais) ? payload.customLocais : (currentDb.customLocais || []),
-                        customQuickReasons: Array.isArray(payload.customQuickReasons) ? payload.customQuickReasons : (currentDb.customQuickReasons || []),
-                        systemUsers: Array.isArray(payload.systemUsers) ? payload.systemUsers : (currentDb.systemUsers || []),
-                        records: Array.isArray(payload.records) ? payload.records : (currentDb.records || []),
-                        updatedAt: payload.updatedAt || new Date().toISOString()
-                    };
-
-                    await saveDatabase(updatedDb);
-                    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-                    res.writeHead(200);
-                    return res.end(JSON.stringify({
-                        success: true,
-                        message: 'Dados da frota sincronizados com sucesso em todos os dispositivos',
-                        updatedAt: updatedDb.updatedAt,
-                        data: updatedDb
-                    }));
-                } catch (err) {
-                    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-                    res.writeHead(500);
-                    return res.end(JSON.stringify({ error: 'Erro ao processar dados: ' + err.message }));
-                }
-            };
-
-            // Suporta req.body pré-parseado pela Vercel ou stream
-            if (req.body && typeof req.body === 'object') {
-                return await processPayload(req.body);
-            }
-
-            let body = '';
-            req.on('data', chunk => {
-                body += chunk.toString();
-                if (body.length > 50 * 1024 * 1024) {
-                    req.destroy();
-                }
-            });
-
-            req.on('end', async () => {
-                try {
-                    const parsed = body ? JSON.parse(body) : {};
-                    await processPayload(parsed);
-                } catch (err) {
+                    payload = await new Promise((resolve, reject) => {
+                        let bodyStr = '';
+                        req.on('data', chunk => {
+                            bodyStr += chunk.toString();
+                            if (bodyStr.length > 50 * 1024 * 1024) {
+                                req.destroy();
+                                reject(new Error('Payload demasiado grande'));
+                            }
+                        });
+                        req.on('end', () => {
+                            try {
+                                resolve(JSON.parse(bodyStr || '{}'));
+                            } catch (e) {
+                                reject(new Error('JSON parse error: ' + e.message));
+                            }
+                        });
+                        req.on('error', reject);
+                    });
+                } catch (readErr) {
                     res.setHeader('Content-Type', 'application/json; charset=utf-8');
                     res.writeHead(400);
-                    return res.end(JSON.stringify({ error: 'Payload JSON inválido: ' + err.message }));
+                    return res.end(JSON.stringify({ error: 'Erro ao receber dados: ' + readErr.message }));
                 }
-            });
-            return;
+            }
+
+            try {
+                const currentDb = await getDatabase();
+                const updatedDb = {
+                    appTitle: payload.appTitle || currentDb.appTitle || "🚓 CONTROLE DE VIATURAS - FROTA 1ª CIA DO 1º BPTRAN",
+                    pizzaCenterImage: payload.pizzaCenterImage !== undefined ? payload.pizzaCenterImage : (currentDb.pizzaCenterImage || ""),
+                    lastStatusUpdate: payload.lastStatusUpdate || currentDb.lastStatusUpdate || new Date().toLocaleString('pt-BR'),
+                    customCias: Array.isArray(payload.customCias) && payload.customCias.length > 0 ? payload.customCias : (currentDb.customCias || []),
+                    customModels: Array.isArray(payload.customModels) && payload.customModels.length > 0 ? payload.customModels : (currentDb.customModels || []),
+                    customPelotoes: Array.isArray(payload.customPelotoes) && payload.customPelotoes.length > 0 ? payload.customPelotoes : (currentDb.customPelotoes || []),
+                    customStatuses: Array.isArray(payload.customStatuses) && payload.customStatuses.length > 0 ? payload.customStatuses : (currentDb.customStatuses || []),
+                    customLocais: Array.isArray(payload.customLocais) && payload.customLocais.length > 0 ? payload.customLocais : (currentDb.customLocais || []),
+                    customQuickReasons: Array.isArray(payload.customQuickReasons) && payload.customQuickReasons.length > 0 ? payload.customQuickReasons : (currentDb.customQuickReasons || []),
+                    systemUsers: Array.isArray(payload.systemUsers) && payload.systemUsers.length > 0 ? payload.systemUsers : (currentDb.systemUsers || []),
+                    records: Array.isArray(payload.records) ? payload.records : (currentDb.records || []),
+                    updatedAt: payload.updatedAt || new Date().toISOString()
+                };
+
+                await saveDatabase(updatedDb);
+
+                res.setHeader('Content-Type', 'application/json; charset=utf-8');
+                res.writeHead(200);
+                return res.end(JSON.stringify({
+                    success: true,
+                    message: 'Dados da frota sincronizados com sucesso em todos os dispositivos',
+                    updatedAt: updatedDb.updatedAt,
+                    data: updatedDb
+                }));
+            } catch (err) {
+                res.setHeader('Content-Type', 'application/json; charset=utf-8');
+                res.writeHead(500);
+                return res.end(JSON.stringify({ error: 'Erro ao processar dados: ' + err.message }));
+            }
         }
     }
 
