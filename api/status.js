@@ -1,2 +1,2 @@
 const handler = require('./index.js');
-module.exports = (req, res) => handler(req, res);
+module.exports = async (req, res) => handler(req, res);

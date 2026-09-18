@@ -2,12 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 
-// Configuração de caminhos do banco de dados (suporta ambiente Serverless/Vercel e Local/Render)
+// Configurações do Banco de Dados
 const IS_VERCEL = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 const BUNDLED_DB_FILE = fs.existsSync(path.join(process.cwd(), 'database.json'))
     ? path.join(process.cwd(), 'database.json')
     : path.join(__dirname, '..', 'database.json');
 const WRITABLE_DB_FILE = IS_VERCEL ? '/tmp/database.json' : BUNDLED_DB_FILE;
+const FIREBASE_URL = 'https://controle-frota-vagner-default-rtdb.firebaseio.com/frota_database.json';
 
 let cachedDb = null;
 let lastDbReadTime = 0;
@@ -41,28 +42,53 @@ function getDefaultDatabase() {
     };
 }
 
-function getDatabase() {
+async function getDatabase() {
     const now = Date.now();
-    if (cachedDb && (now - lastDbReadTime < 1000)) {
+    // Cache em memória curto (1.5s) para acelerar requisições consecutivas sem perder tempo real
+    if (cachedDb && (now - lastDbReadTime < 1500)) {
         return cachedDb;
     }
 
-    // 1. Tentar ler do arquivo gravável (/tmp/database.json na Vercel)
+    // 1. Prioridade Máxima: Banco de Dados Central em Nuvem (Firebase Realtime Database)
+    // Isso garante que alterações feitas em um celular apareçam imediatamente no outro celular
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3500);
+        const fbRes = await fetch(FIREBASE_URL, {
+            headers: { 'Accept': 'application/json' },
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+
+        if (fbRes.ok) {
+            const fbData = await fbRes.json();
+            if (fbData && typeof fbData === 'object' && Array.isArray(fbData.records) && fbData.records.length > 0) {
+                cachedDb = fbData;
+                lastDbReadTime = now;
+                try {
+                    fs.writeFileSync(WRITABLE_DB_FILE, JSON.stringify(fbData, null, 2), 'utf-8');
+                } catch(e) {}
+                return cachedDb;
+            }
+        }
+    } catch (err) {
+        console.warn('Aviso: Leitura do Firebase falhou, usando cache local:', err.message);
+    }
+
+    // 2. Cache em arquivo gravável (/tmp/database.json)
     try {
         if (fs.existsSync(WRITABLE_DB_FILE)) {
             const raw = fs.readFileSync(WRITABLE_DB_FILE, 'utf-8');
             const parsed = JSON.parse(raw);
-            if (parsed && typeof parsed === 'object') {
+            if (parsed && typeof parsed === 'object' && Array.isArray(parsed.records)) {
                 cachedDb = parsed;
                 lastDbReadTime = now;
                 return cachedDb;
             }
         }
-    } catch (err) {
-        console.error('Erro ao ler WRITABLE_DB_FILE:', err.message);
-    }
+    } catch (err) {}
 
-    // 2. Tentar ler do arquivo database.json distribuído no pacote
+    // 3. Arquivo database.json bundled no projeto
     try {
         if (fs.existsSync(BUNDLED_DB_FILE)) {
             const raw = fs.readFileSync(BUNDLED_DB_FILE, 'utf-8');
@@ -73,38 +99,52 @@ function getDatabase() {
                 return cachedDb;
             }
         }
-    } catch (err) {
-        console.error('Erro ao ler BUNDLED_DB_FILE:', err.message);
-    }
+    } catch (err) {}
 
     const fallback = getDefaultDatabase();
-    saveDatabase(fallback);
+    cachedDb = fallback;
     return fallback;
 }
 
-function saveDatabase(data) {
+async function saveDatabase(data) {
+    cachedDb = data;
+    lastDbReadTime = Date.now();
+
+    // 1. Salva no cache local (/tmp)
     try {
-        cachedDb = data;
-        lastDbReadTime = Date.now();
         const tmpTarget = WRITABLE_DB_FILE + '.tmp';
         fs.writeFileSync(tmpTarget, JSON.stringify(data, null, 2), 'utf-8');
         fs.renameSync(tmpTarget, WRITABLE_DB_FILE);
-        return true;
     } catch (err) {
-        console.error('Erro ao salvar database:', err.message);
         try {
             fs.writeFileSync(WRITABLE_DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
-            return true;
-        } catch (err2) {
-            console.error('Falha no fallback de gravação:', err2.message);
-            return false;
-        }
+        } catch (e2) {}
     }
+
+    // 2. CRÍTICO: Grava e AGUARDA a confirmação no Firebase Realtime Database
+    // Sem esse await, a Vercel congela a função antes do envio e outros celulares não recebem a mudança!
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+        const fbRes = await fetch(FIREBASE_URL, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (!fbRes.ok) {
+            console.error('Firebase PUT respondeu com status:', fbRes.status);
+        }
+    } catch (err) {
+        console.error('Erro ao sincronizar com Firebase:', err.message);
+    }
+
+    return true;
 }
 
-// Handler compatível com Vercel Serverless Function e Node.js padrão
-module.exports = (req, res) => {
-    // Cabeçalhos CORS & Performance
+module.exports = async (req, res) => {
+    // CORS Headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
@@ -136,16 +176,16 @@ module.exports = (req, res) => {
         res.setHeader('Expires', '0');
 
         if (req.method === 'GET') {
-            const db = getDatabase();
+            const db = await getDatabase();
             res.setHeader('Content-Type', 'application/json; charset=utf-8');
             res.writeHead(200);
             return res.end(JSON.stringify(db));
         }
 
         if (req.method === 'POST' || req.method === 'PUT') {
-            const processPayload = (payload) => {
+            const processPayload = async (payload) => {
                 try {
-                    const currentDb = getDatabase();
+                    const currentDb = await getDatabase();
                     const updatedDb = {
                         appTitle: payload.appTitle || currentDb.appTitle || "🚓 CONTROLE DE VIATURAS - FROTA 1ª CIA DO 1º BPTRAN",
                         pizzaCenterImage: payload.pizzaCenterImage !== undefined ? payload.pizzaCenterImage : (currentDb.pizzaCenterImage || ""),
@@ -161,12 +201,12 @@ module.exports = (req, res) => {
                         updatedAt: payload.updatedAt || new Date().toISOString()
                     };
 
-                    const saved = saveDatabase(updatedDb);
+                    await saveDatabase(updatedDb);
                     res.setHeader('Content-Type', 'application/json; charset=utf-8');
                     res.writeHead(200);
                     return res.end(JSON.stringify({
                         success: true,
-                        message: 'Dados da frota sincronizados com sucesso no servidor online',
+                        message: 'Dados da frota sincronizados com sucesso em todos os dispositivos',
                         updatedAt: updatedDb.updatedAt,
                         data: updatedDb
                     }));
@@ -177,9 +217,9 @@ module.exports = (req, res) => {
                 }
             };
 
-            // Suporta req.body pré-parseado pela Vercel ou buffer de stream nativo
+            // Suporta req.body pré-parseado pela Vercel ou stream
             if (req.body && typeof req.body === 'object') {
-                return processPayload(req.body);
+                return await processPayload(req.body);
             }
 
             let body = '';
@@ -190,10 +230,10 @@ module.exports = (req, res) => {
                 }
             });
 
-            req.on('end', () => {
+            req.on('end', async () => {
                 try {
                     const parsed = body ? JSON.parse(body) : {};
-                    return processPayload(parsed);
+                    await processPayload(parsed);
                 } catch (err) {
                     res.setHeader('Content-Type', 'application/json; charset=utf-8');
                     res.writeHead(400);

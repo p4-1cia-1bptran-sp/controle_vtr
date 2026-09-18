@@ -3591,7 +3591,7 @@
                     <div class="card-title">🍩 Situação da Frota</div>
                     <div class="chart-container doughnut-chart-container" id="doughnutChartContainer">
                         <canvas id="doughnutChart" style="position: relative; z-index: 1;"></canvas>
-                        <div id="doughnutCenterImageOverlay" class="doughnut-eagle-overlay" style="display: none !important; visibility: hidden !important; opacity: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important;" title="Imagem Central da Pizza"></div>
+                        <div id="doughnutCenterImageOverlay" class="doughnut-eagle-overlay" title="Imagem Central da Pizza"></div>
                         
                         <div id="chartjs-doughnut-tooltip" class="chartjs-custom-tooltip"></div>
                     </div>
@@ -4891,15 +4891,30 @@
 
         if (!isBackground) setCloudStatusBadge('syncing', 'Conectando Online...');
         try {
-            const res = await executeApiRequest('GET');
-            if (!res.success) {
+            let res = await executeApiRequest('GET');
+            let data = null;
+            if (res.success && res.data) {
+                data = (res.data && res.data.dados_frota) ? res.data.dados_frota : res.data;
+            }
+
+            // Se a API retornar vazia ou sem registros, busca diretamente no Firebase
+            if ((!data || !Array.isArray(data.records) || data.records.length === 0) && typeof UNIVERSAL_CLOUD_URL === 'string' && UNIVERSAL_CLOUD_URL) {
+                try {
+                    const fbRes = await fetch(UNIVERSAL_CLOUD_URL);
+                    if (fbRes.ok) {
+                        const fbData = await fbRes.json();
+                        if (fbData && typeof fbData === 'object' && Array.isArray(fbData.records) && fbData.records.length > 0) {
+                            data = fbData;
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            if (!data) {
                 setCloudStatusBadge('connected', '🟢 Online');
                 isCloudConnected = true;
                 return;
             }
-
-            const rawData = res.data;
-            const data = (rawData && rawData.dados_frota) ? rawData.dados_frota : rawData;
             
             if (data && typeof data === 'object' && Object.keys(data).length > 0 && (Array.isArray(data.records) || data.appTitle)) {
                 const currentHash = generateDataHash(data);
@@ -4919,7 +4934,9 @@
                     const localTime = new Date(localUpdatedAt).getTime();
                     const serverTime = new Date(serverUpdatedAt).getTime();
 
-                    if (localTime > serverTime) {
+                    // Nunca sobrescreve o servidor durante background sync automático.
+                    // Apenas envia caso seja uma ação direta do usuário nos últimos 5 segundos.
+                    if (!isBackground && localTime > (serverTime + 5000)) {
                         syncAllDataToOnline(true);
                         setCloudStatusBadge('connected', '🟢 Online');
                         isCloudConnected = true;
@@ -4990,17 +5007,27 @@
                         data.pizzaCenterImage = '';
                     }
                     const localImg = localStorage.getItem('batalhao_vtr_pizza_image') || '';
-                    if (data.pizzaCenterImage !== localImg) {
-                        if (data.pizzaCenterImage) {
-                            localStorage.setItem('batalhao_vtr_pizza_image', data.pizzaCenterImage);
-                            pizzaCenterImage = data.pizzaCenterImage;
-                        } else {
-                            localStorage.removeItem('batalhao_vtr_pizza_image');
-                            pizzaCenterImage = '';
-                        }
+                    if (data.pizzaCenterImage) {
+                        localStorage.setItem('batalhao_vtr_pizza_image', data.pizzaCenterImage);
+                        pizzaCenterImage = data.pizzaCenterImage;
                         if (doughnutChartInstance) {
                             try { updateDoughnutCenterImageOverlay(doughnutChartInstance); } catch (e) {}
                         }
+                    } else if (localImg) {
+                        // Preserva a imagem local se o servidor retornou vazio, e sincroniza para a nuvem
+                        pizzaCenterImage = localImg;
+                        debouncedSyncAllDataToOnline();
+                    } else if (typeof UNIVERSAL_CLOUD_URL === 'string' && UNIVERSAL_CLOUD_URL) {
+                        // Tenta buscar no Firebase caso o celular ainda não tenha a foto
+                        fetch(UNIVERSAL_CLOUD_URL).then(r => r.json()).then(fbData => {
+                            if (fbData && fbData.pizzaCenterImage && isValidImageSrc(fbData.pizzaCenterImage)) {
+                                localStorage.setItem('batalhao_vtr_pizza_image', fbData.pizzaCenterImage);
+                                pizzaCenterImage = fbData.pizzaCenterImage;
+                                if (doughnutChartInstance) {
+                                    updateDoughnutCenterImageOverlay(doughnutChartInstance);
+                                }
+                            }
+                        }).catch(() => {});
                     }
                 }
                 if (data.lastStatusUpdate) {
@@ -5083,6 +5110,18 @@
 
         try {
             await executeApiRequest('POST', payload);
+            // Espelha no Firebase Realtime para garantir que qualquer celular receba os dados imediatamente
+            if (typeof UNIVERSAL_CLOUD_URL === 'string' && UNIVERSAL_CLOUD_URL) {
+                try {
+                    await fetch(UNIVERSAL_CLOUD_URL, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } catch(e) {
+                    console.warn('Sync Firebase:', e);
+                }
+            }
             isCloudConnected = true;
             setCloudStatusBadge('connected', '🟢 Online');
         } catch (err) {
@@ -10404,9 +10443,9 @@
             if (!currentImgSrc || !isValidImageSrc(currentImgSrc)) {
                 loadedPizzaImageSrc = '';
                 overlay.classList.remove('has-image');
-                overlay.style.display = 'none';
-                overlay.style.visibility = 'hidden';
-                overlay.style.opacity = '0';
+                overlay.style.setProperty('display', 'none', 'important');
+                overlay.style.setProperty('visibility', 'hidden', 'important');
+                overlay.style.setProperty('opacity', '0', 'important');
                 overlay.style.background = 'transparent';
                 overlay.style.border = 'none';
                 overlay.style.outline = 'none';
@@ -10415,7 +10454,7 @@
                 return;
             }
 
-            let targetBadgeSize = 115;
+            let targetBadgeSize = 100;
             let leftPx = '50%';
             let topPx = '42%';
 
@@ -10429,7 +10468,7 @@
                     const offsetX = (canvasRect && containerRect) ? (canvasRect.left - containerRect.left) : 0;
                     const offsetY = (canvasRect && containerRect) ? (canvasRect.top - containerRect.top) : 0;
 
-                    targetBadgeSize = Math.max(40, Math.floor((arc.innerRadius * 2) * 0.92));
+                    targetBadgeSize = Math.max(35, Math.floor((arc.innerRadius * 2) * 0.90));
                     leftPx = (cx + offsetX) + 'px';
                     topPx = (cy + offsetY) + 'px';
                 }
@@ -10446,9 +10485,9 @@
                 existingImg.style.height = targetBadgeSize + 'px';
                 existingImg.style.maxHeight = targetBadgeSize + 'px';
                 overlay.classList.add('has-image');
-                overlay.style.display = 'flex';
-                overlay.style.visibility = 'visible';
-                overlay.style.opacity = '1';
+                overlay.style.setProperty('display', 'flex', 'important');
+                overlay.style.setProperty('visibility', 'visible', 'important');
+                overlay.style.setProperty('opacity', '1', 'important');
                 return;
             }
 
@@ -10479,18 +10518,18 @@
 
                 overlay.appendChild(imgEl);
                 overlay.classList.add('has-image');
-                overlay.style.display = 'flex';
-                overlay.style.visibility = 'visible';
-                overlay.style.opacity = '1';
+                overlay.style.setProperty('display', 'flex', 'important');
+                overlay.style.setProperty('visibility', 'visible', 'important');
+                overlay.style.setProperty('opacity', '1', 'important');
             };
 
             testImg.onerror = function() {
                 isPizzaImageLoading = false;
                 loadedPizzaImageSrc = '';
                 overlay.classList.remove('has-image');
-                overlay.style.display = 'none';
-                overlay.style.visibility = 'hidden';
-                overlay.style.opacity = '0';
+                overlay.style.setProperty('display', 'none', 'important');
+                overlay.style.setProperty('visibility', 'hidden', 'important');
+                overlay.style.setProperty('opacity', '0', 'important');
                 overlay.innerHTML = '';
             };
 
