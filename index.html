@@ -5080,11 +5080,7 @@
         }, 350);
     }
 
-    async function syncAllDataToOnline(force = false) {
-        // 🔒 BLOQUEIO ABSOLUTO: Modo visitante jamais sincroniza ou grava nada no banco de dados!
-        if (currentAuthUser && currentAuthUser.username === 'VISITANTE') {
-            return;
-        }
+    async function syncAllDataToOnline(force = true) {
         if (isRemoteUpdate && !force) return;
 
         const now = new Date().toISOString();
@@ -5109,8 +5105,10 @@
         setCloudStatusBadge('syncing', '🔄 Sincronizando...');
 
         try {
+            // 1. Envia para a API do Servidor (Vercel / Render)
             await executeApiRequest('POST', payload);
-            // Espelha no Firebase Realtime para garantir que qualquer celular receba os dados imediatamente
+
+            // 2. Salva diretamente no Firebase Realtime Database (Garante tempo real e persistência permanente entre todos os celulares)
             if (typeof UNIVERSAL_CLOUD_URL === 'string' && UNIVERSAL_CLOUD_URL) {
                 try {
                     await fetch(UNIVERSAL_CLOUD_URL, {
@@ -5309,20 +5307,28 @@
         }
     }
 
+    let lastTouchSyncTime = 0;
     function startAutoSync() {
         if (autoSyncInterval) clearInterval(autoSyncInterval);
         autoSyncInterval = setInterval(() => {
             if (document.hidden) return;
             loadDataFromOnline(true);
-        }, 4000);
+        }, 3000);
 
-        window.addEventListener('focus', () => { loadDataFromOnline(true); });
+        window.addEventListener('focus', () => { loadDataFromOnline(false); });
         window.addEventListener('online', () => { loadDataFromOnline(false); });
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                loadDataFromOnline(true);
+                loadDataFromOnline(false);
             }
         });
+        document.addEventListener('touchstart', () => {
+            const now = Date.now();
+            if (now - lastTouchSyncTime > 4000) {
+                lastTouchSyncTime = now;
+                loadDataFromOnline(true);
+            }
+        }, { passive: true });
     }
 
     function openServerConfigModal() {
@@ -9974,7 +9980,7 @@
         populateVehicleSelects();
         renderDashboard();
         closeMergeModal();
-        syncAllDataToOnline();
+        await syncAllDataToOnline(true);
 
         alert(`✅ Importação Concluída!\n\n• Novas: ${addedCount}\n• Atualizadas: ${updatedCount}\n• Total: ${records.length}`);
         showToast(`📊 <strong>${addedCount + updatedCount}</strong> viaturas salvas Online!`);
@@ -10090,10 +10096,18 @@
         populateAllLocalSelects();
         populateMonthSelect();
         populateVehicleSelects();
-        renderDashboard();
-        syncAllDataToOnline();
+        if (imported && imported.pizzaCenterImage && isValidImageSrc(imported.pizzaCenterImage)) {
+            localStorage.setItem('batalhao_vtr_pizza_image', imported.pizzaCenterImage);
+            pizzaCenterImage = imported.pizzaCenterImage;
+            if (doughnutChartInstance) {
+                try { updateDoughnutCenterImageOverlay(doughnutChartInstance); } catch (e) {}
+            }
+        }
 
-        showToast(`✅ <strong>${addedCount + updatedCount}</strong> viaturas processadas com sucesso!`);
+        renderDashboard();
+        await syncAllDataToOnline(true);
+
+        showToast(`✅ <strong>${addedCount + updatedCount}</strong> viaturas processadas e salvas Online!`);
     }
     let currentTableViewMode = localStorage.getItem('batalhao_vtr_table_view_mode') || (window.innerWidth < 768 ? 'cards' : 'table');
 
