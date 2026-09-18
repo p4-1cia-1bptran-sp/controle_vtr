@@ -9845,7 +9845,7 @@
         }
     }
 
-    function proceedWithConfirmedImport() {
+    async function proceedWithConfirmedImport() {
         if (!pendingImportData) return;
         const selector = document.getElementById('confirmUnitSelector');
         const chosenUnit = selector ? selector.value : (customCias[0] || 'Batalhão');
@@ -9900,7 +9900,7 @@
         });
     }
 
-    function executeFinalSpreadsheetRows(rowsArray, sourceName = '', historyMap = {}, forcedCia = null) {
+    async function executeFinalSpreadsheetRows(rowsArray, sourceName = '', historyMap = {}, forcedCia = null) {
         if (!rowsArray || rowsArray.length === 0) {
             alert('Nenhuma linha de dados de viaturas encontrada.');
             return;
@@ -10004,7 +10004,7 @@
         });
     }
 
-    function executeFinalMergeData(imported, fileName = '', forcedCia = null) {
+    async function executeFinalMergeData(imported, fileName = '', forcedCia = null) {
         let newRecordsList = Array.isArray(imported) ? imported : (imported.records || []);
         const selectedCiaOption = forcedCia || (document.getElementById('mergeCiaSelect') ? document.getElementById('mergeCiaSelect').value : (customCias[0] || 'Batalhão'));
         const detectedCia = selectedCiaOption || 'Batalhão';
